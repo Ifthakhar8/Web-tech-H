@@ -1,0 +1,101 @@
+<?php
+session_start();
+
+// Autoload controllers and models
+spl_autoload_register(function ($class) {
+    if (file_exists('controllers/' . $class . '.php')) {
+        require_once 'controllers/' . $class . '.php';
+    } elseif (file_exists('models/' . $class . '.php')) {
+        require_once 'models/' . $class . '.php';
+    } elseif (file_exists('config/' . $class . '.php')) {
+        require_once 'config/' . $class . '.php';
+    }
+});
+
+// Database connection initialization
+Database::getInstance();
+
+$action = $_GET['action'] ?? 'home';
+
+// --- NEW LOGIC FOR IMPLICIT SEARCH ---
+// If 'search_query' is present but 'action' is not explicitly 'search',
+// force the action to 'search'.
+if (isset($_GET['search_query']) && $action !== 'search') {
+    $action = 'search';
+}
+// --- END NEW LOGIC ---
+
+// Handle routing
+switch ($action) {
+    case 'login':
+        $controller = new AuthController();
+        $controller->login();
+        break;
+    case 'register':
+        $controller = new AuthController();
+        $controller->register();
+        break;
+    case 'logout':
+        $controller = new AuthController();
+        $controller->logout();
+        break;
+    case 'home':
+        // Only allow access to home if logged in
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?action=login');
+            exit;
+        }
+        $controller = new HomeController();
+        $controller->index();
+        break;
+    case 'search':
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?action=login');
+            exit;
+        }
+        $controller = new HomeController();
+        $controller->searchPosts();
+        break;
+    case 'create_post':
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?action=login');
+            exit;
+        }
+        $controller = new HomeController();
+        $controller->createPost();
+        break;
+    case 'like_post':
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?action=login');
+            exit;
+        }
+        $controller = new HomeController();
+        $controller->likePost();
+        break;
+    case 'add_comment':
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?action=login');
+            exit;
+        }
+        $controller = new HomeController();
+        $controller->addComment();
+        break;
+    case 'contact': // New case for displaying the contact form
+        $controller = new ContactController();
+        $controller->index();
+        break;
+    case 'submit_contact': // New case for processing contact form submission
+        $controller = new ContactController();
+        $controller->submit();
+        break;
+    default:
+        // Redirect to login if not logged in and no specific action
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: index.php?action=login');
+        } else {
+            // Or if they are logged in, default to home
+            header('Location: index.php?action=home');
+        }
+        exit;
+}
+?>
